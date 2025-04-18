@@ -1,6 +1,6 @@
 # Backdrop GHA
 
-This is currently an experiemental repository to explore the feasibility of
+This is currently an experimental repository to explore the feasibility of
 using a shared repo for some basic GitHub Actions that can be used by contrib
 module maintainers.
 

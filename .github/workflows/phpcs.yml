@@ -1,5 +1,13 @@
 name: Backdrop CMS coding standards
 
+on:
+  workflow_call:
+    inputs:
+      fail_on_warnings:
+        required: false
+        type: boolean
+        default: false
+
 jobs:
   phpcs:
     name: Run phpcs
@@ -32,4 +40,4 @@ jobs:
         with:
           files: "**.php,**.inc,**.module,**.install,**.profile,**.test"
           standard: ../phpcs/Backdrop
-          fail_on_warnings: false
+          fail_on_warnings: ${{ inputs.fail_on_warnings }}
