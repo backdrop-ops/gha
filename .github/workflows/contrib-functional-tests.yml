@@ -53,7 +53,7 @@ jobs:
 
       - name: Setup Apache
         run: |
-          curl https://raw.githubusercontent.com/backdrop-ops/gha/refs/heads/main/.github/misc/default.conf --output /etc/apache2/sites-available/000-default.conf
+          sudo curl https://raw.githubusercontent.com/backdrop-ops/gha/refs/heads/main/.github/misc/default.conf --output /etc/apache2/sites-available/000-default.conf
           sudo sed -i -e "s?_PWD?$PWD?g" -e "s/_PHP_V/${{ env.USE_PHP_V }}/g" /etc/apache2/sites-available/000-default.conf
           sudo apt-get install libapache2-mod-fcgid
           sudo a2enmod rewrite proxy fcgid proxy_fcgi
