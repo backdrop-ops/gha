@@ -43,13 +43,13 @@ jobs:
         with:
           repository: backdrop/backdrop
 
-      # @todo: figure out how to pull dependencies, if any, here.
-      #- name: Checkout Dependencies
-      #  if: ${{ inputs.dependencies != '' }}
-      #  uses: actions/checkout@v4
-      #  with:
-      #    repository: backdrop-contrib/${{ inputs.dependencies }}
-      #    path: modules/${{ inputs.dependencies }}
+      # @todo: figure out how to pull multiple dependencies, if possible, here.
+      - name: Checkout Dependencies
+        if: ${{ inputs.dependencies != '' }}
+        uses: actions/checkout@v4
+        with:
+          repository: backdrop-contrib/${{ inputs.dependencies }}
+          path: modules/${{ inputs.dependencies }}
 
       - name: Setup Apache
         run: |
