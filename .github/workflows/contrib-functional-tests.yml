@@ -69,9 +69,11 @@ jobs:
           sudo systemctl restart php${{ env.USE_PHP_V }}-fpm.service
 
       - name: Install Backdrop
+        id: core_installed
         run: |
           curl https://raw.githubusercontent.com/backdrop-ops/gha/refs/heads/main/.github/misc/settings.local.php --output ./settings.local.php
           core/scripts/install.sh --db-url=mysql://root:root@127.0.0.1/backdrop
 
       - name: Run functional tests
+        if: steps.core_installed.outcome == 'success'
         run: core/scripts/run-tests.sh --force --directory=modules/${{ env.REPO_NAME }} --verbose --color --concurrency=3 --cache 2>&1
