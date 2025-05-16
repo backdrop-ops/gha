@@ -43,6 +43,11 @@ jobs:
         with:
           repository: backdrop/backdrop
 
+      - name: Checkout Module
+        uses: actions/checkout@v4
+        with:
+          path: modules/${{ env.REPO_NAME }}
+
       # @todo: figure out how to pull multiple dependencies, if possible, here.
       - name: Checkout Dependencies
         if: ${{ inputs.dependencies != '' }}
