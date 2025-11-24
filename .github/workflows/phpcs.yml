@@ -38,5 +38,6 @@ jobs:
 
       - name: Run phpcs on changed code
         run: |
+          curl https://raw.githubusercontent.com/backdrop-ops/gha/refs/heads/main/.github/misc/phpcs-changeset-check.sh --output .github/misc/phpcs-changeset-check.sh
           chmod 700 .github/misc/phpcs-changeset-check.sh
           .github/misc/phpcs-changeset-check.sh origin/${{ github.base_ref }}
