@@ -1,0 +1,53 @@
+name: Backdrop CMS PHP coding standards (on changed lines)
+description: "Runs PHP CodeSniffer on the lines of code changed in a pull request, using the Backdrop coding standards."
+inputs:
+  php_version:
+    description: "PHP version to run on"
+    required: false
+    type: string
+    default: "8.3"
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup env
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        : Setup env
+        echo "REPO_NAME=${PWD##*/}" >> $GITHUB_ENV
+        # Export value obtained from actual workflow for later use.
+        echo 'ACTION_PATH=${{ env.ACTION_PATH }}' >> $GITHUB_ENV
+
+    - name: Setup PHP with CodeSniffer tool
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: "${{ inputs.php_version }}"
+        tools: phpcs
+        coverage: none
+
+    # The checkout action refuses to put it outside, so we have to do it in
+    # two steps.
+    - name: Checkout coding standard
+      uses: actions/checkout@v4
+      with:
+        repository: backdrop-ops/phpcs
+        ref: 1.2.0
+        path: phpcs
+
+    - name: Move standard outside current dir
+      shell: bash
+      run: mv phpcs ..
+
+    - name: Checkout code with full depth
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Run phpcs on changed code
+      shell: bash
+      run: |
+        sudo cp -f ${{ env.ACTION_PATH }}/phpcs-changeset-check.sh .
+        chmod 700 phpcs-changeset-check.sh
+        ./phpcs-changeset-check.sh origin/${{ github.base_ref }}

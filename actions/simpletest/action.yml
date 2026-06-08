@@ -1,0 +1,119 @@
+name: "Simpletest"
+description: "Runs Backdrop CMS functional tests that ship with your module."
+inputs:
+  php_version:
+    description: "PHP version to run on"
+    required: false
+    type: string
+    default: "8.3"
+  db_version:
+    description: "Version of MySQL or MariaDB to run on"
+    required: false
+    type: string
+    default: "mariadb-10.11"
+  module_dependencies:
+    description: "Contrib module(s) this module depends on, comma separated."
+    required: false
+    type: string
+    default: ""
+
+runs:
+  using: "composite"
+  steps:
+    - name: Setup env
+      shell: bash
+      env:
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        : Setup env
+        echo "REPO_NAME=${PWD##*/}" >> $GITHUB_ENV
+        # Export value obtained from actual workflow for later use.
+        echo 'ACTION_PATH=${{ env.ACTION_PATH }}' >> $GITHUB_ENV
+
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: "${{ inputs.php_version }}"
+        tools: none
+        coverage: none
+
+    - name: Install database
+      uses: shogo82148/actions-setup-mysql@v1
+      with:
+        mysql-version: "${{ inputs.db_version }}"
+        root-password: 'root'
+        auto-start: true
+
+    - name: Verify setup and create database
+      shell: bash
+      run: |
+        : Verify setup and create database
+        cp ${{ env.ACTION_PATH }}/.my.cnf ~/.my.cnf
+        mysql -e 'SELECT version()\G'
+        mysql -e 'CREATE DATABASE backdrop;'
+
+    - name: Setup Apache
+      shell: bash
+      run: |
+        : Setup Apache
+        # Setup VirtualHost
+        PHP_VERSION=$(echo -n ${{ inputs.php_version }})
+        sudo cp -f ${{ env.ACTION_PATH }}/default.conf /etc/apache2/sites-available/000-default.conf
+        sudo sed -i -e "s?_PWD?$PWD?g" -e "s/_PHP_V/$PHP_VERSION/g" /etc/apache2/sites-available/000-default.conf
+        # Install and enable Apache modules
+        sudo apt-get -q update > /dev/null
+        sudo apt-get -q install libapache2-mod-fcgid > /dev/null
+        sudo a2enmod rewrite proxy fcgid proxy_fcgi
+        sudo chmod 751 /home/runner
+        sudo systemctl start apache2.service
+        # Setup php-fpm
+        sudo sed -i -e 's/user = www-data/user = runner/' /etc/php/$PHP_VERSION/fpm/pool.d/www.conf
+        sudo sed -i -e 's/listen.owner = www-data/listen.owner = runner/' /etc/php/$PHP_VERSION/fpm/pool.d/www.conf
+        sudo systemctl restart php$PHP_VERSION-fpm.service
+
+    - name: Checkout Backdrop core
+      uses: actions/checkout@v6
+      with:
+        repository: backdrop/backdrop
+
+    - name: Checkout module
+      uses: actions/checkout@v6
+      with:
+        path: modules/${{ env.REPO_NAME }}
+
+    - name: Fetch dependencies if any
+      shell: bash
+      run: |
+        : Fetch dependencies if any
+        cd ./modules
+        DEPS="${{ inputs.module_dependencies }}"
+        BASE='https://github.com/backdrop-contrib'
+        IFS=',' read -r -a PROJECTS <<< "$DEPS"
+        for PROJECT in "${PROJECTS[@]}"
+        do
+          # Trim space.
+          PROJECT=$(echo -n $PROJECT)
+          # Check existence, GitHub asks for credentials with inexistent repos.
+          HTTP_CODE=$(curl -s -o /dev/null -I -w '%{http_code}' $BASE/$PROJECT)
+          if [[ $HTTP_CODE == '200' ]]
+          then
+            echo "Cloning $BASE/$PROJECT.git"
+            git clone -q --depth 1 "$BASE/$PROJECT.git"
+          else
+            echo "::error::Dependency $PROJECT not found."
+            exit 1
+          fi
+        done
+
+    - name: Install Backdrop
+      shell: bash
+      run: |
+        : Install Backdrop
+        cp ${{ env.ACTION_PATH }}/settings.local.php .
+        core/scripts/install.sh --db-url=mysql://root:root@127.0.0.1/backdrop
+
+    - name: Run functional tests
+      shell: bash
+      run: |
+        : Run functional tests
+        core/scripts/run-tests.sh --force --directory=modules/${{ env.REPO_NAME }} --verbose --color --cache 2>&1
