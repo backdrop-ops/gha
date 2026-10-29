@@ -90,4 +90,7 @@ Available (optional) parameters:
 
  - `php_version`: defaults to 8.3
  - `fail_on_warnings`: defaults to true
+ - `ignore_pattern`: defaults to an empty value but can be a string or a
+    comma-separated list of values (e.g. "libraries" to exclude checking a
+    bundled library).
 
